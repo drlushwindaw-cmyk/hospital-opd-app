@@ -1,0 +1,89 @@
+name: Android CI (APK)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools" \
+            "cmdline-tools;latest"
+          yes | sdkmanager --licenses
+
+      - name: Set up Gradle 8.6
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.6
+
+      - name: Assemble Debug APK
+        run: |
+          gradle clean :app:assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hospital-OPD-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+  # Optional: also build an unsigned release APK (bigger optimizations)
+  build-release:
+    runs-on: ubuntu-latest
+    needs: build-apk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools" \
+            "cmdline-tools;latest"
+          yes | sdkmanager --licenses
+
+      - name: Set up Gradle 8.6
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.6
+
+      - name: Assemble Release (unsigned)
+        run: |
+          gradle clean :app:assembleRelease
+
+      - name: Upload unsigned release
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hospital-OPD-release-unsigned-apk
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
